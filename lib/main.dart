@@ -713,11 +713,13 @@ class _CircuitSimulatorState extends State<CircuitSimulator> with TickerProvider
   void onPanStart(DragStartDetails details) {
     if (_interactionMode != InteractionMode.move) return;
 
+    final sceneOffset = transformationController.toScene(details.localPosition);
+
     for (var component in components.reversed) {
-      if (component.rect.contains(details.localPosition)) {
+      if (component.rect.contains(sceneOffset)) {
         setState(() {
           _draggedComponent = component;
-          _dragOffset = details.localPosition - component.position;
+          _dragOffset = sceneOffset - component.position;
           _panStartOffset = component.position;
         });
         break;
@@ -728,7 +730,8 @@ class _CircuitSimulatorState extends State<CircuitSimulator> with TickerProvider
   void onPanUpdate(DragUpdateDetails details) {
     if (_draggedComponent == null) return;
 
-    final newPosition = details.localPosition - _dragOffset!;
+    final sceneOffset = transformationController.toScene(details.localPosition);
+    final newPosition = sceneOffset - _dragOffset!;
     final snappedPosition = Offset(
       (newPosition.dx / 20).round() * 20.0,
       (newPosition.dy / 20).round() * 20.0,
@@ -756,8 +759,8 @@ class _CircuitSimulatorState extends State<CircuitSimulator> with TickerProvider
   Widget build(BuildContext context) {
     return Scaffold(
       body: GestureDetector(
-        onTapUp: (details) => handleTap(details.localPosition),
-        onDoubleTapDown: (details) => handleDoubleTap(details.localPosition),
+        onTapUp: (details) => handleTap(transformationController.toScene(details.localPosition)),
+        onDoubleTapDown: (details) => handleDoubleTap(transformationController.toScene(details.localPosition)),
         onPanStart: onPanStart,
         onPanUpdate: onPanUpdate,
         onPanEnd: onPanEnd,
