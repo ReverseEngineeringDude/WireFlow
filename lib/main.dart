@@ -101,20 +101,31 @@ class VDTKApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Virtual Digital Trainers Kit',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: const Color(0xFF0A0A0A),
         scaffoldBackgroundColor: const Color(0xFF0A0A0A),
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Colors.white),
-        ),
+        textTheme: const TextTheme(bodyMedium: TextStyle(color: Colors.white)),
       ),
       home: const CircuitSimulator(),
     );
   }
 }
 
-enum ComponentType { and, or, not, switch_comp, led, and3, or3, nand, nor, xor, xnor }
+enum ComponentType {
+  and,
+  or,
+  not,
+  switch_comp,
+  led,
+  and3,
+  or3,
+  nand,
+  nor,
+  xor,
+  xnor,
+}
 
 enum LogicState { high, low, floating }
 
@@ -240,8 +251,9 @@ class NotGate extends Component {
 
   @override
   void evaluate() {
-    pins[1].state =
-        pins[0].state == LogicState.high ? LogicState.low : LogicState.high;
+    pins[1].state = pins[0].state == LogicState.high
+        ? LogicState.low
+        : LogicState.high;
   }
 
   @override
@@ -258,7 +270,8 @@ class NotGate extends Component {
 }
 
 class AndGate3Input extends Component {
-  AndGate3Input(String id, Offset position) : super(id, position, ComponentType.and3) {
+  AndGate3Input(String id, Offset position)
+    : super(id, position, ComponentType.and3) {
     name = 'AND';
     icNumber = '7411';
     pins.add(Pin('in1', this));
@@ -272,7 +285,10 @@ class AndGate3Input extends Component {
     final in1 = pins[0].state;
     final in2 = pins[1].state;
     final in3 = pins[2].state;
-    pins[3].state = (in1 == LogicState.high && in2 == LogicState.high && in3 == LogicState.high)
+    pins[3].state =
+        (in1 == LogicState.high &&
+            in2 == LogicState.high &&
+            in3 == LogicState.high)
         ? LogicState.high
         : LogicState.low;
   }
@@ -291,7 +307,8 @@ class AndGate3Input extends Component {
 }
 
 class OrGate3Input extends Component {
-  OrGate3Input(String id, Offset position) : super(id, position, ComponentType.or3) {
+  OrGate3Input(String id, Offset position)
+    : super(id, position, ComponentType.or3) {
     name = 'OR';
     icNumber = '4075';
     pins.add(Pin('in1', this));
@@ -305,7 +322,10 @@ class OrGate3Input extends Component {
     final in1 = pins[0].state;
     final in2 = pins[1].state;
     final in3 = pins[2].state;
-    pins[3].state = (in1 == LogicState.high || in2 == LogicState.high || in3 == LogicState.high)
+    pins[3].state =
+        (in1 == LogicState.high ||
+            in2 == LogicState.high ||
+            in3 == LogicState.high)
         ? LogicState.high
         : LogicState.low;
   }
@@ -324,7 +344,8 @@ class OrGate3Input extends Component {
 }
 
 class NandGate extends Component {
-  NandGate(String id, Offset position) : super(id, position, ComponentType.nand) {
+  NandGate(String id, Offset position)
+    : super(id, position, ComponentType.nand) {
     name = 'NAND';
     icNumber = '7400';
     pins.add(Pin('in1', this));
@@ -398,9 +419,7 @@ class XorGate extends Component {
   void evaluate() {
     final in1 = pins[0].state;
     final in2 = pins[1].state;
-    pins[2].state = (in1 != in2)
-        ? LogicState.high
-        : LogicState.low;
+    pins[2].state = (in1 != in2) ? LogicState.high : LogicState.low;
   }
 
   @override
@@ -417,7 +436,8 @@ class XorGate extends Component {
 }
 
 class XnorGate extends Component {
-  XnorGate(String id, Offset position) : super(id, position, ComponentType.xnor) {
+  XnorGate(String id, Offset position)
+    : super(id, position, ComponentType.xnor) {
     name = 'XNOR';
     icNumber = '74266';
     pins.add(Pin('in1', this));
@@ -429,9 +449,7 @@ class XnorGate extends Component {
   void evaluate() {
     final in1 = pins[0].state;
     final in2 = pins[1].state;
-    pins[2].state = (in1 == in2)
-        ? LogicState.high
-        : LogicState.low;
+    pins[2].state = (in1 == in2) ? LogicState.high : LogicState.low;
   }
 
   @override
@@ -449,13 +467,14 @@ class XnorGate extends Component {
 
 class SwitchComponent extends Component {
   SwitchComponent(String id, Offset position)
-      : super(id, position, ComponentType.switch_comp) {
+    : super(id, position, ComponentType.switch_comp) {
     pins.add(Pin('out', this, isOutput: true));
   }
 
   void toggle() {
-    pins[0].state =
-        pins[0].state == LogicState.high ? LogicState.low : LogicState.high;
+    pins[0].state = pins[0].state == LogicState.high
+        ? LogicState.low
+        : LogicState.high;
   }
 
   @override
@@ -470,7 +489,7 @@ class SwitchComponent extends Component {
 
 class LedComponent extends Component {
   LedComponent(String id, Offset position)
-      : super(id, position, ComponentType.led) {
+    : super(id, position, ComponentType.led) {
     pins.add(Pin('in', this));
   }
 
@@ -493,7 +512,8 @@ class CircuitSimulator extends StatefulWidget {
 
 enum InteractionMode { normal, move }
 
-class _CircuitSimulatorState extends State<CircuitSimulator> with TickerProviderStateMixin {
+class _CircuitSimulatorState extends State<CircuitSimulator>
+    with TickerProviderStateMixin {
   final List<Component> components = [];
   final List<Wire> wires = [];
   final TransformationController transformationController =
@@ -575,8 +595,7 @@ class _CircuitSimulatorState extends State<CircuitSimulator> with TickerProvider
   }
 
   void startSimulation() {
-    simulationTimer =
-        Timer.periodic(const Duration(milliseconds: 16), (timer) {
+    simulationTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
       setState(() {
         for (var wire in wires) {
           if (wire.isInvalid) {
@@ -658,7 +677,7 @@ class _CircuitSimulatorState extends State<CircuitSimulator> with TickerProvider
         }
       }
       if (tappedPin != null) {
-        tappedComponent = null; 
+        tappedComponent = null;
         break;
       }
     }
@@ -670,10 +689,12 @@ class _CircuitSimulatorState extends State<CircuitSimulator> with TickerProvider
         });
       } else {
         if (selectedPin!.owner != tappedPin.owner) {
-          final bool isOutputToOutput = selectedPin!.isOutput && tappedPin.isOutput;
+          final bool isOutputToOutput =
+              selectedPin!.isOutput && tappedPin.isOutput;
           final newWire = Wire(
-              selectedPin!.isOutput ? selectedPin! : tappedPin,
-              selectedPin!.isOutput ? tappedPin : selectedPin!);
+            selectedPin!.isOutput ? selectedPin! : tappedPin,
+            selectedPin!.isOutput ? tappedPin : selectedPin!,
+          );
           if (isOutputToOutput) {
             newWire.isInvalid = true;
           }
@@ -745,7 +766,13 @@ class _CircuitSimulatorState extends State<CircuitSimulator> with TickerProvider
   void onPanEnd(DragEndDetails details) {
     if (_draggedComponent != null && _panStartOffset != null) {
       if (_panStartOffset != _draggedComponent!.position) {
-        _executeCommand(MoveComponentCommand(_draggedComponent!, _panStartOffset!, _draggedComponent!.position));
+        _executeCommand(
+          MoveComponentCommand(
+            _draggedComponent!,
+            _panStartOffset!,
+            _draggedComponent!.position,
+          ),
+        );
       }
     }
     setState(() {
@@ -759,8 +786,11 @@ class _CircuitSimulatorState extends State<CircuitSimulator> with TickerProvider
   Widget build(BuildContext context) {
     return Scaffold(
       body: GestureDetector(
-        onTapUp: (details) => handleTap(transformationController.toScene(details.localPosition)),
-        onDoubleTapDown: (details) => handleDoubleTap(transformationController.toScene(details.localPosition)),
+        onTapUp: (details) =>
+            handleTap(transformationController.toScene(details.localPosition)),
+        onDoubleTapDown: (details) => handleDoubleTap(
+          transformationController.toScene(details.localPosition),
+        ),
         onPanStart: onPanStart,
         onPanUpdate: onPanUpdate,
         onPanEnd: onPanEnd,
@@ -789,9 +819,13 @@ class _CircuitSimulatorState extends State<CircuitSimulator> with TickerProvider
                 : InteractionMode.normal;
           });
         },
-        backgroundColor: _interactionMode == InteractionMode.move ? Colors.cyan : Colors.grey,
+        backgroundColor: _interactionMode == InteractionMode.move
+            ? Colors.cyan
+            : Colors.grey,
         child: Icon(
-          _interactionMode == InteractionMode.move ? Icons.pan_tool : Icons.touch_app,
+          _interactionMode == InteractionMode.move
+              ? Icons.pan_tool
+              : Icons.touch_app,
           color: Colors.white,
         ),
       ),
@@ -899,37 +933,54 @@ class ComponentPalette extends StatelessWidget {
             children: [
               Draggable<ComponentType>(
                 data: ComponentType.switch_comp,
-                feedback: const Icon(Icons.power_settings_new,
-                    color: Colors.cyan, size: 40),
-                child: const Icon(Icons.power_settings_new,
-                    color: Colors.white, size: 40),
+                feedback: const Icon(
+                  Icons.power_settings_new,
+                  color: Colors.cyan,
+                  size: 40,
+                ),
+                child: const Icon(
+                  Icons.power_settings_new,
+                  color: Colors.white,
+                  size: 40,
+                ),
                 onDragEnd: (details) =>
                     onComponentDrag(details, ComponentType.switch_comp),
               ),
               Draggable<ComponentType>(
                 data: ComponentType.led,
-                feedback: const Icon(Icons.lightbulb, color: Colors.yellow, size: 40),
-                child: const Icon(Icons.lightbulb_outline,
-                    color: Colors.white, size: 40),
-                onDragEnd: (details) => onComponentDrag(details, ComponentType.led),
+                feedback: const Icon(
+                  Icons.lightbulb,
+                  color: Colors.yellow,
+                  size: 40,
+                ),
+                child: const Icon(
+                  Icons.lightbulb_outline,
+                  color: Colors.white,
+                  size: 40,
+                ),
+                onDragEnd: (details) =>
+                    onComponentDrag(details, ComponentType.led),
               ),
               Draggable<ComponentType>(
                 data: ComponentType.and,
                 feedback: _buildGateIcon('AND'),
                 child: _buildGateIcon('AND'),
-                onDragEnd: (details) => onComponentDrag(details, ComponentType.and),
+                onDragEnd: (details) =>
+                    onComponentDrag(details, ComponentType.and),
               ),
               Draggable<ComponentType>(
                 data: ComponentType.or,
                 feedback: _buildGateIcon('OR'),
                 child: _buildGateIcon('OR'),
-                onDragEnd: (details) => onComponentDrag(details, ComponentType.or),
+                onDragEnd: (details) =>
+                    onComponentDrag(details, ComponentType.or),
               ),
               Draggable<ComponentType>(
                 data: ComponentType.not,
                 feedback: _buildGateIcon('NOT'),
                 child: _buildGateIcon('NOT'),
-                onDragEnd: (details) => onComponentDrag(details, ComponentType.not),
+                onDragEnd: (details) =>
+                    onComponentDrag(details, ComponentType.not),
               ),
             ],
           ),
@@ -941,37 +992,43 @@ class ComponentPalette extends StatelessWidget {
                 data: ComponentType.and3,
                 feedback: _buildGateIcon('AND3'),
                 child: _buildGateIcon('AND3'),
-                onDragEnd: (details) => onComponentDrag(details, ComponentType.and3),
+                onDragEnd: (details) =>
+                    onComponentDrag(details, ComponentType.and3),
               ),
               Draggable<ComponentType>(
                 data: ComponentType.or3,
                 feedback: _buildGateIcon('OR3'),
                 child: _buildGateIcon('OR3'),
-                onDragEnd: (details) => onComponentDrag(details, ComponentType.or3),
+                onDragEnd: (details) =>
+                    onComponentDrag(details, ComponentType.or3),
               ),
               Draggable<ComponentType>(
                 data: ComponentType.nand,
                 feedback: _buildGateIcon('NAND'),
                 child: _buildGateIcon('NAND'),
-                onDragEnd: (details) => onComponentDrag(details, ComponentType.nand),
+                onDragEnd: (details) =>
+                    onComponentDrag(details, ComponentType.nand),
               ),
               Draggable<ComponentType>(
                 data: ComponentType.nor,
                 feedback: _buildGateIcon('NOR'),
                 child: _buildGateIcon('NOR'),
-                onDragEnd: (details) => onComponentDrag(details, ComponentType.nor),
+                onDragEnd: (details) =>
+                    onComponentDrag(details, ComponentType.nor),
               ),
               Draggable<ComponentType>(
                 data: ComponentType.xor,
                 feedback: _buildGateIcon('XOR'),
                 child: _buildGateIcon('XOR'),
-                onDragEnd: (details) => onComponentDrag(details, ComponentType.xor),
+                onDragEnd: (details) =>
+                    onComponentDrag(details, ComponentType.xor),
               ),
               Draggable<ComponentType>(
                 data: ComponentType.xnor,
                 feedback: _buildGateIcon('XNOR'),
                 child: _buildGateIcon('XNOR'),
-                onDragEnd: (details) => onComponentDrag(details, ComponentType.xnor),
+                onDragEnd: (details) =>
+                    onComponentDrag(details, ComponentType.xnor),
               ),
             ],
           ),
@@ -991,7 +1048,10 @@ class ComponentPalette extends StatelessWidget {
       child: Center(
         child: Text(
           label,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -1024,7 +1084,13 @@ class CircuitPainter extends CustomPainter {
   final Component? draggedComponent;
   final Animation<double> animation;
 
-  CircuitPainter(this.components, this.wires, this.selectedPin, this.draggedComponent, this.animation) : super(repaint: animation);
+  CircuitPainter(
+    this.components,
+    this.wires,
+    this.selectedPin,
+    this.draggedComponent,
+    this.animation,
+  ) : super(repaint: animation);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1037,8 +1103,12 @@ class CircuitPainter extends CustomPainter {
         ..color = Colors.black.withOpacity(0.5)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
       canvas.drawRRect(
-          RRect.fromRectAndRadius(draggedComponent!.rect.translate(5, 5), const Radius.circular(4)),
-          shadowPaint);
+        RRect.fromRectAndRadius(
+          draggedComponent!.rect.translate(5, 5),
+          const Radius.circular(4),
+        ),
+        shadowPaint,
+      );
     }
 
     for (var wire in wires) {
@@ -1057,12 +1127,13 @@ class CircuitPainter extends CustomPainter {
       final path = Path();
       path.moveTo(wire.from.position.dx, wire.from.position.dy);
       path.cubicTo(
-          wire.from.position.dx + 50,
-          wire.from.position.dy,
-          wire.to.position.dx - 50,
-          wire.to.position.dy,
-          wire.to.position.dx,
-          wire.to.position.dy);
+        wire.from.position.dx + 50,
+        wire.from.position.dy,
+        wire.to.position.dx - 50,
+        wire.to.position.dy,
+        wire.to.position.dx,
+        wire.to.position.dy,
+      );
       canvas.drawPath(path, wirePaint);
     }
 
@@ -1080,7 +1151,7 @@ class CircuitPainter extends CustomPainter {
 
   void _drawComponent(Canvas canvas, Component component) {
     final bool isDragged = component == draggedComponent;
-    
+
     if (component is SwitchComponent) {
       _drawSwitch(canvas, component, isDragged);
     } else if (component is LedComponent) {
@@ -1122,22 +1193,30 @@ class CircuitPainter extends CustomPainter {
       ..color = isDragged ? Colors.yellow : Colors.cyan
       ..style = PaintingStyle.stroke
       ..strokeWidth = isDragged ? 2.0 : 1.0;
-    
+
     canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(4)),
-        componentPaint);
+      RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+      componentPaint,
+    );
     canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(4)),
-        borderPaint);
+      RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+      borderPaint,
+    );
 
     // Notch
     final notchPath = Path();
     notchPath.moveTo(rect.left + rect.width / 2 - 5, rect.top);
-    notchPath.arcToPoint(Offset(rect.left + rect.width / 2 + 5, rect.top), radius: const Radius.circular(5));
-    canvas.drawPath(notchPath, borderPaint..style=PaintingStyle.fill);
+    notchPath.arcToPoint(
+      Offset(rect.left + rect.width / 2 + 5, rect.top),
+      radius: const Radius.circular(5),
+    );
+    canvas.drawPath(notchPath, borderPaint..style = PaintingStyle.fill);
 
     final textStyle = const TextStyle(
-        color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10);
+      color: Colors.white,
+      fontWeight: FontWeight.bold,
+      fontSize: 10,
+    );
     final textSpan = TextSpan(
       text: '${component.name}\n${component.icNumber}',
       style: textStyle,
@@ -1149,19 +1228,28 @@ class CircuitPainter extends CustomPainter {
     );
     textPainter.layout(minWidth: 0, maxWidth: rect.width);
     textPainter.paint(
-        canvas,
-        component.position +
-            Offset((rect.width - textPainter.width) / 2,
-                (rect.height - textPainter.height) / 2));
-    
+      canvas,
+      component.position +
+          Offset(
+            (rect.width - textPainter.width) / 2,
+            (rect.height - textPainter.height) / 2,
+          ),
+    );
+
     // Pins
     final pinPaint = Paint()..color = Colors.grey.shade600;
     for (var pin in component.pins) {
       final pinPos = pin.position;
       if (pin.isOutput) {
-        canvas.drawRect(Rect.fromCenter(center: pinPos, width: 10, height: 2), pinPaint);
+        canvas.drawRect(
+          Rect.fromCenter(center: pinPos, width: 10, height: 2),
+          pinPaint,
+        );
       } else {
-        canvas.drawRect(Rect.fromCenter(center: pinPos, width: 10, height: 2), pinPaint);
+        canvas.drawRect(
+          Rect.fromCenter(center: pinPos, width: 10, height: 2),
+          pinPaint,
+        );
       }
     }
   }
@@ -1172,13 +1260,18 @@ class CircuitPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = isDragged ? 2.0 : 1.0;
     canvas.drawRRect(
-        RRect.fromRectAndRadius(component.rect, const Radius.circular(4)),
-        borderPaint);
+      RRect.fromRectAndRadius(component.rect, const Radius.circular(4)),
+      borderPaint,
+    );
     final switchPaint = Paint()
       ..color = component.pins[0].state == LogicState.high
           ? Colors.greenAccent
           : Colors.red.shade900;
-    canvas.drawCircle(component.position + const Offset(20, 20), 10, switchPaint);
+    canvas.drawCircle(
+      component.position + const Offset(20, 20),
+      10,
+      switchPaint,
+    );
   }
 
   void _drawLed(Canvas canvas, LedComponent component, bool isDragged) {
@@ -1187,8 +1280,9 @@ class CircuitPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = isDragged ? 2.0 : 1.0;
     canvas.drawRRect(
-        RRect.fromRectAndRadius(component.rect, const Radius.circular(4)),
-        borderPaint);
+      RRect.fromRectAndRadius(component.rect, const Radius.circular(4)),
+      borderPaint,
+    );
     final ledPaint = Paint()
       ..color = component.pins[0].state == LogicState.high
           ? Colors.yellow
