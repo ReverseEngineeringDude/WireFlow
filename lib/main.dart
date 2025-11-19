@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:math_expressions/math_expressions.dart';
 
 void main() {
   runApp(const VDTKApp());
@@ -23,11 +24,13 @@ class AddComponentCommand implements Command {
   @override
   void execute() {
     _state.components.add(_component);
+    _state._updateFormulas();
   }
 
   @override
   void undo() {
     _state.components.remove(_component);
+    _state._updateFormulas();
   }
 }
 
@@ -48,6 +51,7 @@ class RemoveComponentCommand implements Command {
     for (var wire in _removedWires) {
       _state.wires.remove(wire);
     }
+    _state._updateFormulas();
   }
 
   @override
@@ -56,6 +60,7 @@ class RemoveComponentCommand implements Command {
     for (var wire in _removedWires) {
       _state.wires.add(wire);
     }
+    _state._updateFormulas();
   }
 }
 
@@ -86,11 +91,13 @@ class AddWireCommand implements Command {
   @override
   void execute() {
     _state.wires.add(_wire);
+    _state._updateFormulas();
   }
 
   @override
   void undo() {
     _state.wires.remove(_wire);
+    _state._updateFormulas();
   }
 }
 
@@ -127,7 +134,11 @@ enum ComponentType {
   xnor,
 }
 
-enum LogicState { high, low, floating }
+enum LogicState {
+  high,
+  low,
+  floating,
+}
 
 class Pin {
   final String id;
@@ -138,6 +149,13 @@ class Pin {
   Offset get position => owner.getPinPosition(this);
 
   Pin(this.id, this.owner, {this.isOutput = false});
+
+  Component? get sourceComponent {
+    if (isOutput) return owner;
+    if (connections.isEmpty) return null;
+    final wire = connections.first;
+    return wire.from.owner;
+  }
 }
 
 class Wire {
@@ -164,8 +182,11 @@ abstract class Component {
   final List<Pin> pins = [];
   String name = '';
   String icNumber = '';
+  String formula = '';
 
   Component(this.id, this.position, this.type);
+
+  String calculateFormula();
 
   void evaluate();
   Offset getPinPosition(Pin pin);
@@ -186,6 +207,13 @@ class AndGate extends Component {
     pins.add(Pin('in1', this));
     pins.add(Pin('in2', this));
     pins.add(Pin('out', this, isOutput: true));
+  }
+
+  @override
+  String calculateFormula() {
+    final in1 = pins[0].sourceComponent?.calculateFormula() ?? '?';
+    final in2 = pins[1].sourceComponent?.calculateFormula() ?? '?';
+    return '($in1 . $in2)';
   }
 
   @override
@@ -220,6 +248,13 @@ class OrGate extends Component {
   }
 
   @override
+  String calculateFormula() {
+    final in1 = pins[0].sourceComponent?.calculateFormula() ?? '?';
+    final in2 = pins[1].sourceComponent?.calculateFormula() ?? '?';
+    return '($in1 + $in2)';
+  }
+
+  @override
   void evaluate() {
     final in1 = pins[0].state;
     final in2 = pins[1].state;
@@ -250,6 +285,12 @@ class NotGate extends Component {
   }
 
   @override
+  String calculateFormula() {
+    final in1 = pins[0].sourceComponent?.calculateFormula() ?? '?';
+    return "$in1'";
+  }
+
+  @override
   void evaluate() {
     pins[1].state = pins[0].state == LogicState.high
         ? LogicState.low
@@ -271,7 +312,7 @@ class NotGate extends Component {
 
 class AndGate3Input extends Component {
   AndGate3Input(String id, Offset position)
-    : super(id, position, ComponentType.and3) {
+      : super(id, position, ComponentType.and3) {
     name = 'AND';
     icNumber = '7411';
     pins.add(Pin('in1', this));
@@ -281,12 +322,19 @@ class AndGate3Input extends Component {
   }
 
   @override
+  String calculateFormula() {
+    final in1 = pins[0].sourceComponent?.calculateFormula() ?? '?';
+    final in2 = pins[1].sourceComponent?.calculateFormula() ?? '?';
+    final in3 = pins[2].sourceComponent?.calculateFormula() ?? '?';
+    return '($in1 . $in2 . $in3)';
+  }
+
+  @override
   void evaluate() {
     final in1 = pins[0].state;
     final in2 = pins[1].state;
     final in3 = pins[2].state;
-    pins[3].state =
-        (in1 == LogicState.high &&
+    pins[3].state = (in1 == LogicState.high &&
             in2 == LogicState.high &&
             in3 == LogicState.high)
         ? LogicState.high
@@ -308,7 +356,7 @@ class AndGate3Input extends Component {
 
 class OrGate3Input extends Component {
   OrGate3Input(String id, Offset position)
-    : super(id, position, ComponentType.or3) {
+      : super(id, position, ComponentType.or3) {
     name = 'OR';
     icNumber = '4075';
     pins.add(Pin('in1', this));
@@ -318,12 +366,19 @@ class OrGate3Input extends Component {
   }
 
   @override
+  String calculateFormula() {
+    final in1 = pins[0].sourceComponent?.calculateFormula() ?? '?';
+    final in2 = pins[1].sourceComponent?.calculateFormula() ?? '?';
+    final in3 = pins[2].sourceComponent?.calculateFormula() ?? '?';
+    return '($in1 + $in2 + $in3)';
+  }
+
+  @override
   void evaluate() {
     final in1 = pins[0].state;
     final in2 = pins[1].state;
     final in3 = pins[2].state;
-    pins[3].state =
-        (in1 == LogicState.high ||
+    pins[3].state = (in1 == LogicState.high ||
             in2 == LogicState.high ||
             in3 == LogicState.high)
         ? LogicState.high
@@ -345,12 +400,19 @@ class OrGate3Input extends Component {
 
 class NandGate extends Component {
   NandGate(String id, Offset position)
-    : super(id, position, ComponentType.nand) {
+      : super(id, position, ComponentType.nand) {
     name = 'NAND';
     icNumber = '7400';
     pins.add(Pin('in1', this));
     pins.add(Pin('in2', this));
     pins.add(Pin('out', this, isOutput: true));
+  }
+
+  @override
+  String calculateFormula() {
+    final in1 = pins[0].sourceComponent?.calculateFormula() ?? '?';
+    final in2 = pins[1].sourceComponent?.calculateFormula() ?? '?';
+    return '($in1 . $in2)\'';
   }
 
   @override
@@ -385,6 +447,13 @@ class NorGate extends Component {
   }
 
   @override
+  String calculateFormula() {
+    final in1 = pins[0].sourceComponent?.calculateFormula() ?? '?';
+    final in2 = pins[1].sourceComponent?.calculateFormula() ?? '?';
+    return '($in1 + $in2)\'';
+  }
+
+  @override
   void evaluate() {
     final in1 = pins[0].state;
     final in2 = pins[1].state;
@@ -416,6 +485,13 @@ class XorGate extends Component {
   }
 
   @override
+  String calculateFormula() {
+    final in1 = pins[0].sourceComponent?.calculateFormula() ?? '?';
+    final in2 = pins[1].sourceComponent?.calculateFormula() ?? '?';
+    return '($in1 ⊕ $in2)';
+  }
+
+  @override
   void evaluate() {
     final in1 = pins[0].state;
     final in2 = pins[1].state;
@@ -437,12 +513,19 @@ class XorGate extends Component {
 
 class XnorGate extends Component {
   XnorGate(String id, Offset position)
-    : super(id, position, ComponentType.xnor) {
+      : super(id, position, ComponentType.xnor) {
     name = 'XNOR';
     icNumber = '74266';
     pins.add(Pin('in1', this));
     pins.add(Pin('in2', this));
     pins.add(Pin('out', this, isOutput: true));
+  }
+
+  @override
+  String calculateFormula() {
+    final in1 = pins[0].sourceComponent?.calculateFormula() ?? '?';
+    final in2 = pins[1].sourceComponent?.calculateFormula() ?? '?';
+    return '($in1 ⊙ $in2)';
   }
 
   @override
@@ -466,15 +549,20 @@ class XnorGate extends Component {
 }
 
 class SwitchComponent extends Component {
-  SwitchComponent(String id, Offset position)
-    : super(id, position, ComponentType.switch_comp) {
+  SwitchComponent(String id, Offset position, String name)
+      : super(id, position, ComponentType.switch_comp) {
+    this.name = name;
     pins.add(Pin('out', this, isOutput: true));
   }
 
+  @override
+  String calculateFormula() {
+    return name;
+  }
+
   void toggle() {
-    pins[0].state = pins[0].state == LogicState.high
-        ? LogicState.low
-        : LogicState.high;
+    pins[0].state =
+        pins[0].state == LogicState.high ? LogicState.low : LogicState.high;
   }
 
   @override
@@ -489,8 +577,23 @@ class SwitchComponent extends Component {
 
 class LedComponent extends Component {
   LedComponent(String id, Offset position)
-    : super(id, position, ComponentType.led) {
+      : super(id, position, ComponentType.led) {
     pins.add(Pin('in', this));
+  }
+
+  @override
+  String calculateFormula() {
+    final formula = pins[0].sourceComponent?.calculateFormula() ?? '';
+    if (formula.isEmpty) {
+      return '';
+    }
+    try {
+      Parser p = Parser();
+      Expression exp = p.parse(formula);
+      return exp.simplify().toString();
+    } catch (e) {
+      return formula;
+    }
   }
 
   @override
@@ -525,6 +628,8 @@ class _CircuitSimulatorState extends State<CircuitSimulator>
   Offset? _dragOffset;
   Offset? _panStartOffset;
   late AnimationController _animationController;
+  int _nextSwitchId = 0;
+  final TextEditingController _notesController = TextEditingController();
 
   final List<Command> _undoStack = [];
   final List<Command> _redoStack = [];
@@ -543,6 +648,7 @@ class _CircuitSimulatorState extends State<CircuitSimulator>
   void dispose() {
     simulationTimer?.cancel();
     _animationController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -578,7 +684,25 @@ class _CircuitSimulatorState extends State<CircuitSimulator>
       wires.clear();
       _undoStack.clear();
       _redoStack.clear();
+      _nextSwitchId = 0;
+      _updateFormulas();
     });
+  }
+
+  void _updateFormulas() {
+    for (var component in components) {
+      component.formula = component.calculateFormula();
+    }
+  }
+
+  String _getNthSwitchName(int n) {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    String result = '';
+    do {
+      result = alphabet[n % alphabet.length] + result;
+      n = (n / alphabet.length).floor() - 1;
+    } while (n >= 0);
+    return result;
   }
 
   void _zoom(double scale) {
@@ -595,7 +719,8 @@ class _CircuitSimulatorState extends State<CircuitSimulator>
   }
 
   void startSimulation() {
-    simulationTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
+    simulationTimer =
+        Timer.periodic(const Duration(milliseconds: 16), (timer) {
       setState(() {
         for (var wire in wires) {
           if (wire.isInvalid) {
@@ -612,242 +737,242 @@ class _CircuitSimulatorState extends State<CircuitSimulator>
     });
   }
 
-  void onComponentDrag(DraggableDetails details, ComponentType type) {
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final Offset localPosition = renderBox.globalToLocal(details.offset);
-    final Offset snappedPosition = Offset(
-      (localPosition.dx / 20).round() * 20.0,
-      (localPosition.dy / 20).round() * 20.0,
-    );
-
-    final String id = DateTime.now().millisecondsSinceEpoch.toString();
-    Component newComponent;
-    switch (type) {
-      case ComponentType.and:
-        newComponent = AndGate(id, snappedPosition);
-        break;
-      case ComponentType.or:
-        newComponent = OrGate(id, snappedPosition);
-        break;
-      case ComponentType.not:
-        newComponent = NotGate(id, snappedPosition);
-        break;
-      case ComponentType.switch_comp:
-        newComponent = SwitchComponent(id, snappedPosition);
-        break;
-      case ComponentType.led:
-        newComponent = LedComponent(id, snappedPosition);
-        break;
-      case ComponentType.and3:
-        newComponent = AndGate3Input(id, snappedPosition);
-        break;
-      case ComponentType.or3:
-        newComponent = OrGate3Input(id, snappedPosition);
-        break;
-      case ComponentType.nand:
-        newComponent = NandGate(id, snappedPosition);
-        break;
-      case ComponentType.nor:
-        newComponent = NorGate(id, snappedPosition);
-        break;
-      case ComponentType.xor:
-        newComponent = XorGate(id, snappedPosition);
-        break;
-      case ComponentType.xnor:
-        newComponent = XnorGate(id, snappedPosition);
-        break;
-    }
-    _executeCommand(AddComponentCommand(this, newComponent));
-  }
-
-  void handleTap(Offset position) {
-    if (_interactionMode != InteractionMode.normal) return;
-
-    Pin? tappedPin;
-    Component? tappedComponent;
-
-    for (var component in components) {
-      if (component.rect.contains(position)) {
-        tappedComponent = component;
+    void onComponentDrag(DraggableDetails details, ComponentType type) {
+      final RenderBox renderBox = context.findRenderObject() as RenderBox;
+      final Offset localPosition = renderBox.globalToLocal(details.offset);
+      final Offset snappedPosition = Offset(
+        (localPosition.dx / 20).round() * 20.0,
+        (localPosition.dy / 20).round() * 20.0,
+      );
+  
+      final String id = DateTime.now().millisecondsSinceEpoch.toString();
+      Component newComponent;
+      switch (type) {
+        case ComponentType.and:
+          newComponent = AndGate(id, snappedPosition);
+          break;
+        case ComponentType.or:
+          newComponent = OrGate(id, snappedPosition);
+          break;
+        case ComponentType.not:
+          newComponent = NotGate(id, snappedPosition);
+          break;
+        case ComponentType.switch_comp:
+          newComponent =
+              SwitchComponent(id, snappedPosition, _getNthSwitchName(_nextSwitchId++));
+          break;
+        case ComponentType.led:
+          newComponent = LedComponent(id, snappedPosition);
+          break;
+        case ComponentType.and3:
+          newComponent = AndGate3Input(id, snappedPosition);
+          break;
+        case ComponentType.or3:
+          newComponent = OrGate3Input(id, snappedPosition);
+          break;
+        case ComponentType.nand:
+          newComponent = NandGate(id, snappedPosition);
+          break;
+        case ComponentType.nor:
+          newComponent = NorGate(id, snappedPosition);
+          break;
+        case ComponentType.xor:
+          newComponent = XorGate(id, snappedPosition);
+          break;
+        case ComponentType.xnor:
+          newComponent = XnorGate(id, snappedPosition);
+          break;
       }
-      for (var pin in component.pins) {
-        if ((pin.position - position).distance < 8.0) {
-          tappedPin = pin;
+      _executeCommand(AddComponentCommand(this, newComponent));
+    }
+  
+    void handleTap(Offset position) {
+      if (_interactionMode != InteractionMode.normal) return;
+  
+      Pin? tappedPin;
+      Component? tappedComponent;
+  
+      for (var component in components) {
+        if (component.rect.contains(position)) {
+          tappedComponent = component;
+        }
+        for (var pin in component.pins) {
+          if ((pin.position - position).distance < 8.0) {
+            tappedPin = pin;
+            break;
+          }
+        }
+        if (tappedPin != null) {
+          tappedComponent = null;
           break;
         }
       }
+  
       if (tappedPin != null) {
-        tappedComponent = null;
-        break;
-      }
-    }
-
-    if (tappedPin != null) {
-      if (selectedPin == null) {
+        if (selectedPin == null) {
+          setState(() {
+            selectedPin = tappedPin;
+          });
+        } else {
+          if (selectedPin!.owner != tappedPin.owner) {
+            final bool isOutputToOutput =
+                selectedPin!.isOutput && tappedPin.isOutput;
+            final newWire = Wire(
+              selectedPin!.isOutput ? selectedPin! : tappedPin,
+              selectedPin!.isOutput ? tappedPin : selectedPin!,
+            );
+            if (isOutputToOutput) {
+              newWire.isInvalid = true;
+            }
+            _executeCommand(AddWireCommand(this, newWire));
+          }
+          setState(() {
+            selectedPin = null;
+          });
+        }
+      } else if (tappedComponent != null && tappedComponent is SwitchComponent) {
+        final switchComponent = tappedComponent;
         setState(() {
-          selectedPin = tappedPin;
+          switchComponent.toggle();
         });
       } else {
-        if (selectedPin!.owner != tappedPin.owner) {
-          final bool isOutputToOutput =
-              selectedPin!.isOutput && tappedPin.isOutput;
-          final newWire = Wire(
-            selectedPin!.isOutput ? selectedPin! : tappedPin,
-            selectedPin!.isOutput ? tappedPin : selectedPin!,
-          );
-          if (isOutputToOutput) {
-            newWire.isInvalid = true;
-          }
-          _executeCommand(AddWireCommand(this, newWire));
-        }
         setState(() {
           selectedPin = null;
         });
       }
-    } else if (tappedComponent != null && tappedComponent is SwitchComponent) {
-      final switchComponent = tappedComponent;
-      setState(() {
-        switchComponent.toggle();
-      });
-    } else {
-      setState(() {
-        selectedPin = null;
-      });
     }
-  }
-
-  void handleDoubleTap(Offset position) {
-    if (_interactionMode != InteractionMode.normal) return;
-
-    Component? toRemove;
-    for (var component in components) {
-      if (component.rect.contains(position)) {
-        toRemove = component;
-        break;
+  
+    void handleDoubleTap(Offset position) {
+      if (_interactionMode != InteractionMode.normal) return;
+  
+      Component? toRemove;
+      for (var component in components) {
+        if (component.rect.contains(position)) {
+          toRemove = component;
+          break;
+        }
+      }
+      if (toRemove != null) {
+        _executeCommand(RemoveComponentCommand(this, toRemove));
       }
     }
-    if (toRemove != null) {
-      _executeCommand(RemoveComponentCommand(this, toRemove));
-    }
-  }
-
-  void onPanStart(DragStartDetails details) {
-    if (_interactionMode != InteractionMode.move) return;
-
-    final sceneOffset = transformationController.toScene(details.localPosition);
-
-    for (var component in components.reversed) {
-      if (component.rect.contains(sceneOffset)) {
-        setState(() {
-          _draggedComponent = component;
-          _dragOffset = sceneOffset - component.position;
-          _panStartOffset = component.position;
-        });
-        break;
-      }
-    }
-  }
-
-  void onPanUpdate(DragUpdateDetails details) {
-    if (_draggedComponent == null) return;
-
-    final sceneOffset = transformationController.toScene(details.localPosition);
-    final newPosition = sceneOffset - _dragOffset!;
-    final snappedPosition = Offset(
-      (newPosition.dx / 20).round() * 20.0,
-      (newPosition.dy / 20).round() * 20.0,
-    );
-
-    setState(() {
-      _draggedComponent!.position = snappedPosition;
-    });
-  }
-
-  void onPanEnd(DragEndDetails details) {
-    if (_draggedComponent != null && _panStartOffset != null) {
-      if (_panStartOffset != _draggedComponent!.position) {
-        _executeCommand(
-          MoveComponentCommand(
-            _draggedComponent!,
-            _panStartOffset!,
-            _draggedComponent!.position,
-          ),
-        );
-      }
-    }
-    setState(() {
-      _draggedComponent = null;
-      _dragOffset = null;
-      _panStartOffset = null;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: GestureDetector(
-        onTapUp: (details) =>
-            handleTap(transformationController.toScene(details.localPosition)),
-        onDoubleTapDown: (details) => handleDoubleTap(
-          transformationController.toScene(details.localPosition),
-        ),
-        onPanStart: onPanStart,
-        onPanUpdate: onPanUpdate,
-        onPanEnd: onPanEnd,
-        child: InteractiveViewer(
-          transformationController: transformationController,
-          minScale: 0.1,
-          maxScale: 4.0,
-          child: CustomPaint(
-            painter: GridPainter(),
-            foregroundPainter: CircuitPainter(
-              components,
-              wires,
-              selectedPin,
-              _draggedComponent,
-              _animationController,
-            ),
-            child: Container(),
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
+  
+    void onPanStart(DragStartDetails details) {
+      if (_interactionMode != InteractionMode.move) return;
+  
+      final sceneOffset = transformationController.toScene(details.localPosition);
+  
+      for (var component in components.reversed) {
+        if (component.rect.contains(sceneOffset)) {
           setState(() {
-            _interactionMode = _interactionMode == InteractionMode.normal
-                ? InteractionMode.move
-                : InteractionMode.normal;
+            _draggedComponent = component;
+            _dragOffset = sceneOffset - component.position;
+            _panStartOffset = component.position;
           });
-        },
-        backgroundColor: _interactionMode == InteractionMode.move
-            ? Colors.cyan
-            : Colors.grey,
-        child: Icon(
-          _interactionMode == InteractionMode.move
-              ? Icons.pan_tool
-              : Icons.touch_app,
-          color: Colors.white,
-        ),
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ActionToolbar(
-            onUndo: _undo,
-            onRedo: _redo,
-            onClear: _clearAll,
-            onZoomIn: () => _zoom(1.2),
-            onZoomOut: () => _zoom(0.8),
-            onResetView: _resetView,
-            undoEnabled: _undoStack.isNotEmpty,
-            redoEnabled: _redoStack.isNotEmpty,
+          break;
+        }
+      }
+    }
+  
+    void onPanUpdate(DragUpdateDetails details) {
+      if (_draggedComponent == null) return;
+  
+      final sceneOffset = transformationController.toScene(details.localPosition);
+      final newPosition = sceneOffset - _dragOffset!;
+      final snappedPosition = Offset(
+        (newPosition.dx / 20).round() * 20.0,
+        (newPosition.dy / 20).round() * 20.0,
+      );
+  
+      setState(() {
+        _draggedComponent!.position = snappedPosition;
+      });
+    }
+  
+    void onPanEnd(DragEndDetails details) {
+      if (_draggedComponent != null && _panStartOffset != null) {
+        if (_panStartOffset != _draggedComponent!.position) {
+          _executeCommand(
+            MoveComponentCommand(
+              _draggedComponent!,
+              _panStartOffset!,
+              _draggedComponent!.position,
+            ),
+          );
+        }
+      }
+      setState(() {
+        _draggedComponent = null;
+        _dragOffset = null;
+        _panStartOffset = null;
+      });
+    }
+  
+    @override
+    Widget build(BuildContext context) {
+      return Scaffold(
+        body: GestureDetector(
+          onTapUp: (details) =>
+              handleTap(transformationController.toScene(details.localPosition)),
+          onDoubleTapDown: (details) => handleDoubleTap(
+            transformationController.toScene(details.localPosition),
           ),
-          ComponentPalette(onComponentDrag: onComponentDrag),
-        ],
-      ),
-    );
-  }
-}
+          onPanStart: onPanStart,
+          onPanUpdate: onPanUpdate,
+          onPanEnd: onPanEnd,
+          child: InteractiveViewer(
+            transformationController: transformationController,
+            minScale: 0.1,
+            maxScale: 4.0,
+            child: CustomPaint(
+              painter: GridPainter(),
+              foregroundPainter: CircuitPainter(
+                components,
+                wires,
+                selectedPin,
+                _draggedComponent,
+                _animationController,
+              ),
+              child: Container(),
+            ),
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            setState(() {
+              _interactionMode = _interactionMode == InteractionMode.normal
+                  ? InteractionMode.move
+                  : InteractionMode.normal;
+            });
+          },
+          backgroundColor: _interactionMode == InteractionMode.move
+              ? Colors.cyan
+              : Colors.grey,
+          child: Icon(
+            _interactionMode == InteractionMode.move
+                ? Icons.pan_tool
+                : Icons.touch_app,
+            color: Colors.white,
+          ),
+        ),
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+                      ActionToolbar(
+                        onUndo: _undo,
+                        onRedo: _redo,
+                        onClear: _clearAll,
+                        onZoomIn: () => _zoom(1.2),
+                        onZoomOut: () => _zoom(0.8),
+                        onResetView: _resetView,
+                        undoEnabled: _undoStack.isNotEmpty,
+                        redoEnabled: _redoStack.isNotEmpty,
+                        notesController: _notesController,
+                      ),            ComponentPalette(onComponentDrag: onComponentDrag),
+          ],
+        ),
+      );
+    }}
 
 class ActionToolbar extends StatelessWidget {
   final VoidCallback onUndo;
@@ -858,6 +983,7 @@ class ActionToolbar extends StatelessWidget {
   final VoidCallback onResetView;
   final bool undoEnabled;
   final bool redoEnabled;
+  final TextEditingController notesController;
 
   const ActionToolbar({
     super.key,
@@ -869,46 +995,104 @@ class ActionToolbar extends StatelessWidget {
     required this.onResetView,
     required this.undoEnabled,
     required this.redoEnabled,
+    required this.notesController,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.black.withOpacity(0.7),
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+      child: Column(
         children: [
-          IconButton(
-            icon: const Icon(Icons.undo),
-            color: undoEnabled ? Colors.white : Colors.grey,
-            onPressed: undoEnabled ? onUndo : null,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.undo),
+                color: undoEnabled ? Colors.white : Colors.grey,
+                onPressed: undoEnabled ? onUndo : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.redo),
+                color: redoEnabled ? Colors.white : Colors.grey,
+                onPressed: redoEnabled ? onRedo : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_sweep),
+                color: Colors.white,
+                onPressed: onClear,
+              ),
+              const VerticalDivider(color: Colors.grey, width: 20, thickness: 1),
+              IconButton(
+                icon: const Icon(Icons.zoom_in),
+                color: Colors.white,
+                onPressed: onZoomIn,
+              ),
+              IconButton(
+                icon: const Icon(Icons.zoom_out),
+                color: Colors.white,
+                onPressed: onZoomOut,
+              ),
+              IconButton(
+                icon: const Icon(Icons.center_focus_strong),
+                color: Colors.white,
+                onPressed: onResetView,
+              ),
+              IconButton(
+                icon: const Icon(Icons.more_vert),
+                color: Colors.white,
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('How to Use'),
+                      content: const SingleChildScrollView(
+                        child: Text(
+                          'Welcome to the Virtual Digital Logic Trainer!\n\n'
+                          'Adding Components:\n'
+                          '- Drag and drop components from the palette at the bottom onto the canvas.\n\n'
+                          'Connecting Components:\n'
+                          '- Tap on a pin to select it.\n'
+                          '- Tap on another pin to create a wire between them.\n\n'
+                          'Interacting with Components:\n'
+                          '- Double-tap a component to remove it.\n'
+                          '- Tap on a switch to toggle its state.\n\n'
+                          'Moving Components:\n'
+                          '- Use the hand tool in the bottom right to switch to move mode.\n'
+                          '- Drag components to move them around the canvas.\n\n'
+                          'Canvas Control:\n'
+                          '- Use the zoom buttons to zoom in and out.\n'
+                          '- Use the reset view button to reset the canvas.\n'
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.redo),
-            color: redoEnabled ? Colors.white : Colors.grey,
-            onPressed: redoEnabled ? onRedo : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_sweep),
-            color: Colors.white,
-            onPressed: onClear,
-          ),
-          const VerticalDivider(color: Colors.grey, width: 20, thickness: 1),
-          IconButton(
-            icon: const Icon(Icons.zoom_in),
-            color: Colors.white,
-            onPressed: onZoomIn,
-          ),
-          IconButton(
-            icon: const Icon(Icons.zoom_out),
-            color: Colors.white,
-            onPressed: onZoomOut,
-          ),
-          IconButton(
-            icon: const Icon(Icons.center_focus_strong),
-            color: Colors.white,
-            onPressed: onResetView,
+          const Divider(color: Colors.grey),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: notesController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Notes',
+                    hintStyle: TextStyle(color: Colors.grey),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1160,6 +1344,8 @@ class CircuitPainter extends CustomPainter {
       _drawGate(canvas, component, isDragged);
     }
 
+    _drawFormula(canvas, component);
+
     for (var pin in component.pins) {
       final pinPaint = Paint();
       bool isInvalidPin = pin.connections.any((w) => w.isInvalid);
@@ -1179,6 +1365,33 @@ class CircuitPainter extends CustomPainter {
       }
       canvas.drawCircle(pin.position, 4, pinPaint);
     }
+  }
+
+  void _drawFormula(Canvas canvas, Component component) {
+    if (component.formula.isEmpty) return;
+
+    final textStyle = const TextStyle(
+      color: Colors.white,
+      fontSize: 12,
+    );
+    final textSpan = TextSpan(
+      text: component.formula,
+      style: textStyle,
+    );
+    final textPainter = TextPainter(
+      text: textSpan,
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      component.position +
+          Offset(
+            (component.rect.width - textPainter.width) / 2,
+            -textPainter.height - 5,
+          ),
+    );
   }
 
   void _drawGate(Canvas canvas, Component component, bool isDragged) {
